@@ -1,0 +1,8 @@
+<launch>
+
+	<include file="$(find phantomx_arm_bringup)/launch/arm.launch"/>
+
+	<node name="arbotix_gui" pkg="arbotix_python" type="arbotix_gui"/>
+	<node name="command" 	 pkg="swimsat" 		  type="commander.py"/> 
+
+</launch>

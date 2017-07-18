@@ -1,0 +1,8 @@
+Symlinking /home/tesla/catkin_ws/src/swimsat/devel/./setup.sh
+Symlinking /home/tesla/catkin_ws/src/swimsat/devel/./setup.bash
+Symlinking /home/tesla/catkin_ws/src/swimsat/devel/./_setup_util.py
+Symlinking /home/tesla/catkin_ws/src/swimsat/devel/./setup.zsh
+Symlinking /home/tesla/catkin_ws/src/swimsat/devel/./env.sh
+Symlinking /home/tesla/catkin_ws/src/swimsat/devel/lib/pkgconfig/catkin_tools_prebuild.pc
+Symlinking /home/tesla/catkin_ws/src/swimsat/devel/share/catkin_tools_prebuild/cmake/catkin_tools_prebuildConfig-version.cmake
+Symlinking /home/tesla/catkin_ws/src/swimsat/devel/share/catkin_tools_prebuild/cmake/catkin_tools_prebuildConfig.cmake

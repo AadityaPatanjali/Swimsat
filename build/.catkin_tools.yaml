@@ -1,0 +1,6 @@
+devel_space: /home/tesla/catkin_ws/src/swimsat/devel
+install: false
+install_space: /home/tesla/catkin_ws/src/swimsat/install
+profile: default
+source_space: /home/tesla/catkin_ws/src/swimsat/src
+workspace: /home/tesla/catkin_ws/src/swimsat

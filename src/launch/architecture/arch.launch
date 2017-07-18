@@ -1,0 +1,7 @@
+<launch>
+  <node pkg="swimsat" type="rqt.py"  name="PiCam_Node" />
+  <node pkg="swimsat" type="rqt2.py" name="Arm_Node" />
+  <node pkg="swimsat" type="rqt3.py" name="Webcam_Node" />
+  <node pkg="swimsat" type="rqt4.py" name="Monitor_Node" />
+  <node pkg="swimsat" type="rqt5.py" name="Projector_Node" />
+</launch>

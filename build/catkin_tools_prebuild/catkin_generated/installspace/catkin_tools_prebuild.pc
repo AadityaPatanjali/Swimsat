@@ -1,0 +1,8 @@
+prefix=/home/tesla/catkin_ws/src/swimsat/install
+
+Name: catkin_tools_prebuild
+Description: Description of catkin_tools_prebuild
+Version: 0.0.0
+Cflags: 
+Libs: -L/home/tesla/catkin_ws/src/swimsat/install/lib 
+Requires: 
