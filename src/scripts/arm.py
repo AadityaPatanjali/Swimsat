@@ -31,8 +31,8 @@ class ArmMovement():
 			self.joint_limits.append({'name':name, 'min_angle':min_angle*math.pi/180.0, 'max_angle':max_angle*math.pi/180.0})
 		self.pan_index  = 0
 		self.tilt_index = 3
-		self.pan_sweep_step = 5.0
-		self.tilt_sweep_step = 5.0
+		self.pan_sweep_step = math.pi/180.0*10.0
+		self.tilt_sweep_step = math.pi/180.0*10.0
 		self.pan_sweep_max = 40.0
 		self.pan_sweep_min = -40.0
 		self.tilt_sweep_max = 9.0
@@ -103,7 +103,7 @@ class ArmMovement():
 			return [ele*180.0/math.pi for ele in group_variable_values]
 
 	def set_homing_position(self):
-		angles = [0.0,52.0,-120.0,-25.0,0.0]
+		angles = [0.0,52.0,-80.0,-60.0,0.0]
 		group_variable_values = [ele*math.pi/180.0 for ele in angles]
 		self.group.set_joint_value_target(group_variable_values)
 		self.group.go(wait=True)
@@ -139,11 +139,11 @@ class ArmMovement():
 	def pan_sweep(self):
 		group_variable_values = self.group.get_current_joint_values()
 		if self.pan_left:
-			move_to = group_variable_values[pan_index]+self.pan_sweep_step
+			move_to = group_variable_values[self.pan_index]+self.pan_sweep_step
 			if  move_to > self.pan_sweep_max:
 				self.pan_left = False
 			else:
-				group_variable_values[pan_index] = move_to
+				group_variable_values[self.pan_index] = move_to
 				try:
 					self.group.set_joint_value_target(group_variable_values)
 					# plan2 = group.plan()
@@ -151,11 +151,11 @@ class ArmMovement():
 				except:
 					pass
 		else:
-			move_to = group_variable_values[pan_index]+self.pan_sweep_step
+			move_to = group_variable_values[self.pan_index]-self.pan_sweep_step
 			if  move_to < self.pan_sweep_min:
 				self.pan_left = True
 			else:
-				group_variable_values[pan_index] = move_to
+				group_variable_values[self.pan_index] = move_to
 				try:
 					self.group.set_joint_value_target(group_variable_values)
 					# plan2 = group.plan()
@@ -166,11 +166,11 @@ class ArmMovement():
 	def tilt_sweep(self):
 		group_variable_values = self.group.get_current_joint_values()
 		if self.tilt_up:
-			move_to = group_variable_values[tilt_index]+self.tilt_sweep_step
+			move_to = group_variable_values[self.tilt_index]+self.tilt_sweep_step
 			if  move_to > self.tilt_sweep_max:
 				self.tilt_up = False
 			else:
-				group_variable_values[tilt_index] = move_to
+				group_variable_values[self.tilt_index] = move_to
 				try:
 					self.group.set_joint_value_target(group_variable_values)
 					# plan2 = group.plan()
@@ -178,11 +178,11 @@ class ArmMovement():
 				except:
 					pass
 		else:
-			move_to = group_variable_values[tilt_index]+self.tilt_sweep_step
+			move_to = group_variable_values[self.tilt_index]-self.tilt_sweep_step
 			if  move_to < self.tilt_sweep_min:
 				self.tilt_up = True
 			else:
-				group_variable_values[tilt_index] = move_to
+				group_variable_values[self.tilt_index] = move_to
 				try:
 					self.group.set_joint_value_target(group_variable_values)
 					# plan2 = group.plan()
@@ -285,16 +285,16 @@ class ArmMovement():
 		################################################################################################
 		##### ENTER YOUR CODE HERE
 		################################################################################################
-		Track_tol = 50
-		X_Step = 4*math.pi/180
-		Y_Step = 4*math.pi/180
+		Track_tol = 30
+		X_Step = math.pi/180*4
+		Y_Step = math.pi/180*4
 		P = 0
 		T = 0
 		# HSV Limits
-		greenLower = (0, 119, 0)
-		greenUpper = (5, 255, 255)
+		greenLower = (0,0,255)
+		greenUpper = (91,23,255)
 		
-		camera = cv2.VideoCapture(-1)
+		camera = cv2.VideoCapture(1)
 
 		while True:
 			# grab the current frame
@@ -348,12 +348,13 @@ class ArmMovement():
 				print("Desired Corrections Pan: "+repr(P)+" and  Tilt: "+repr(T)+"\n")
 				# rospy.sleep(0.1)
 				self.move_arm(P,T)
-			# Did not detect any contours, then sweep
-			else:
-				self.pan_sweep()
-				self.tilt_sweep()
+			# # Did not detect any contours, then sweep
+			# else:
+			# 	self.pan_sweep()
+			# 	self.tilt_sweep()
 			# show the frame to our screen
 			cv2.imshow("Frame", frame)
+			cv2.imshow("Tresholded", mask)
 			
 			key = cv2.waitKey(1) & 0xFF
 			# if the 'q' key is pressed, stop the loop
@@ -363,10 +364,17 @@ class ArmMovement():
 
 
 if __name__=='__main__':
-  try:
-    arm = ArmMovement()
-    arm.main()
-    # arm.__test_echo_current_joint_values__()
-    # arm.__test_joint_movement__()
-  except rospy.ROSInterruptException:
-    pass
+	try:
+		arm = ArmMovement()
+		arm.main()
+		# while True:
+		# 	rospy.sleep(0.5)
+		# 	arm.pan_sweep()
+		# 	arm.tilt_sweep()
+		# 	if sys.stdin in select.select([sys.stdin], [], [], 0)[0]:
+		# 		line = raw_input()
+		# 		break
+	    # arm.__test_echo_current_joint_values__()
+	    # arm.__test_joint_movement__()
+	except rospy.ROSInterruptException:
+		pass
