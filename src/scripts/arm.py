@@ -29,18 +29,173 @@ class ArmMovement():
 			# pull angles
 			min_angle, max_angle = getJointLimits(name, joint_defaults)
 			self.joint_limits.append({'name':name, 'min_angle':min_angle*math.pi/180.0, 'max_angle':max_angle*math.pi/180.0})
+		self.pan_index  = 0
+		self.tilt_index = 3
+		self.pan_sweep_step = 5.0
+		self.tilt_sweep_step = 5.0
+		self.pan_sweep_max = 40.0
+		self.pan_sweep_min = -40.0
+		self.tilt_sweep_max = 9.0
+		self.tilt_sweep_min = -40.0
+		self.pan_left =True
+		self.tilt_up = True
 
+		self.set_homing_position()
 
+	def __del__(self):
+		self.set_homing_position()		
+		## When finished shut down moveit_commander.
+		moveit_commander.roscpp_shutdown()
 
+	def set_pan_index(self,pan_index):
+		self.pan_index = pan_index
+
+	def get_pan_index(self):
+		return self.pan_index
+
+	def set_tilt_index(self,tilt_index):
+		self.tilt_index = tilt_index
+
+	def get_tilt_index(self):
+		return self.tilt_index
+
+	def set_pan_sweep_step(self,pan_sweep_step):
+		self.pan_sweep_step = pan_sweep_step
+
+	def set_tilt_sweep_step(self,tilt_sweep_step):
+		self.tilt_sweep_step = tilt_sweep_step
+
+	def get_pan_sweep_step(self):
+		return self.pan_sweep_step
+
+	def get_tilt_sweep_step(self):
+		return self.tilt_sweep_step
+
+	def set_pan_sweep_max(self,pan_sweep_max):
+		self.pan_sweep_max = pan_sweep_max
+
+	def set_tilt_sweep_max(self,tilt_sweep_max):
+		self.tilt_sweep_max = tilt_sweep_max
+
+	def set_pan_sweep_min(self,pan_sweep_min):
+		self.pan_sweep_min = pan_sweep_min
+
+	def set_tilt_sweep_min(self,tilt_sweep_min):
+		self.tilt_sweep_min = tilt_sweep_min
+
+	def get_pan_sweep_max(self):
+		return self.pan_sweep_max
+
+	def get_tilt_sweep_max(self):
+		return self.tilt_sweep_max
+
+	def get_pan_sweep_min(self):
+		return self.pan_sweep_min
+
+	def get_tilt_sweep_min(self):
+		return self.tilt_sweep_min
+
+	def get_current_joint_values(self,degrees = False):
+		group_variable_values = self.group.get_current_joint_values()
+		if not degrees:
+			return group_variable_values
+		else:
+			return [ele*180.0/math.pi for ele in group_variable_values]
+
+	def set_homing_position(self):
+		angles = [0.0,52.0,-120.0,-25.0,0.0]
+		group_variable_values = [ele*math.pi/180.0 for ele in angles]
+		self.group.set_joint_value_target(group_variable_values)
+		self.group.go(wait=True)
+
+	def get_max_limits(self,degrees=False):
+		if degrees:
+			return [self.joint_limits[i].get('max_angle')*180.0/math.pi*100 for i in range(0,5)]
+		else:
+			return [self.joint_limits[i].get('max_angle') for i in range(0,5)]
+
+	def get_min_limits(self,degrees=False):
+		if degrees:
+			return [self.joint_limits[i].get('min_angle')*180.0/math.pi*100 for i in range(0,5)]
+		else:
+			return [self.joint_limits[i].get('min_angle') for i in range(0,5)]
+
+	def get_pan_tilt_min(self,degrees=False):
+		if degrees:
+			min = self.get_min_limits(degrees=True)
+			return [ min[self.pan_index], min[self.tilt_index] ] 
+		else:
+			min = self.get_min_limits()
+			return [ min[self.pan_index], min[self.tilt_index]  ]
+
+	def get_pan_tilt_max(self,degrees=False):
+		if degrees:
+			max = self.get_max_limits(degrees=True)
+			return [ max[self.pan_index], max[self.tilt_index] ] 
+		else:
+			max = self.get_max_limits()
+			return [ max[self.pan_index], max[self.tilt_index]  ]
+
+	def pan_sweep(self):
+		group_variable_values = self.group.get_current_joint_values()
+		if self.pan_left:
+			move_to = group_variable_values[pan_index]+self.pan_sweep_step
+			if  move_to > self.pan_sweep_max:
+				self.pan_left = False
+			else:
+				group_variable_values[pan_index] = move_to
+				try:
+					self.group.set_joint_value_target(group_variable_values)
+					# plan2 = group.plan()
+					self.group.go(wait=False)
+				except:
+					pass
+		else:
+			move_to = group_variable_values[pan_index]+self.pan_sweep_step
+			if  move_to < self.pan_sweep_min:
+				self.pan_left = True
+			else:
+				group_variable_values[pan_index] = move_to
+				try:
+					self.group.set_joint_value_target(group_variable_values)
+					# plan2 = group.plan()
+					self.group.go(wait=False)
+				except:
+					pass
+
+	def tilt_sweep(self):
+		group_variable_values = self.group.get_current_joint_values()
+		if self.tilt_up:
+			move_to = group_variable_values[tilt_index]+self.tilt_sweep_step
+			if  move_to > self.tilt_sweep_max:
+				self.tilt_up = False
+			else:
+				group_variable_values[tilt_index] = move_to
+				try:
+					self.group.set_joint_value_target(group_variable_values)
+					# plan2 = group.plan()
+					self.group.go(wait=False)
+				except:
+					pass
+		else:
+			move_to = group_variable_values[tilt_index]+self.tilt_sweep_step
+			if  move_to < self.tilt_sweep_min:
+				self.tilt_up = True
+			else:
+				group_variable_values[tilt_index] = move_to
+				try:
+					self.group.set_joint_value_target(group_variable_values)
+					# plan2 = group.plan()
+					self.group.go(wait=False)
+				except:
+					pass
 
 	def move_joints_callback(self,data):
 		[pan,tilt] = data.data
-		pan_index  = 0
-		tilt_index = 3
 		# print "== Pan and Tilt ",(pan,tilt)
 		group_variable_values = self.group.get_current_joint_values()
-		group_variable_values[pan_index] += pan
-		group_variable_values[tilt_index] += tilt
+		group_variable_values[self.pan_index] += pan
+		group_variable_values[self.tilt_index] += tilt
 		try:
 			self.group.set_joint_value_target(group_variable_values)
 			# plan2 = group.plan()
@@ -48,20 +203,19 @@ class ArmMovement():
 		except:
 			pass
 
-	def move_arm(self,pan,tilt,pan_index=0,tilt_index=3):
+	def move_arm(self,pan,tilt):
 		group_variable_values = self.group.get_current_joint_values()
-		group_variable_values[pan_index] += pan
-		group_variable_values[tilt_index] += tilt
+		group_variable_values_copy = self.group.get_current_joint_values()
+		group_variable_values[self.pan_index] += pan
+		group_variable_values[self.tilt_index] += tilt
 		try:
 			self.group.set_joint_value_target(group_variable_values)
 			# plan2 = group.plan()
 			self.group.go(wait=False)
 		except:
-			pass
-
-	def get_current_joint_values(self):
-		return self.group.get_current_joint_values()
-
+			self.group.set_joint_value_target(group_variable_values_copy)
+			# plan2 = group.plan()
+			self.group.go(wait=False)
 
 	def __move_by_pose_orientation__(self,orientation_w=0,orientation_x=0,orientation_y=0,orientation_z=1.0):
 		print "============ Generating plan"
@@ -82,8 +236,8 @@ class ArmMovement():
 	def __test_joint_movement__(self):
 		while True:
 			group_variable_values = self.group.get_current_joint_values()
-			print "Max Angles", [self.joint_limits[i].get('max_angle')*180.0/math.pi*100 for i in range(0,5)]
-			print "Min Angles", [self.joint_limits[i].get('min_angle')*180.0/math.pi*100 for i in range(0,5)]
+			print "Max Angles", self.get_max_limits(degrees=True)
+			print "Min Angles", self.get_min_limits(degrees=True)
 			print "Current joint angles:", [ele*180.0/math.pi for ele in group_variable_values]
 			try:
 				angle = float(input("Enter angle to turn: "))
@@ -97,9 +251,9 @@ class ArmMovement():
 				print "Exiting!"
 				break
 
-	def __test_single_joint_movement__(self,index,angle):
+	def __test_single_joint_movement__(self,angle,index):
 		group_variable_values = self.group.get_current_joint_values()
-		group_variable_values[index] = angle*math.pi/180.0/100
+		group_variable_values[index] = angle*math.pi/180.0
 		self.group.set_joint_value_target(group_variable_values)
 		self.group.go(wait=True)
 
@@ -140,7 +294,7 @@ class ArmMovement():
 		greenLower = (0, 119, 0)
 		greenUpper = (5, 255, 255)
 		
-		camera = cv2.VideoCapture(1)
+		camera = cv2.VideoCapture(-1)
 
 		while True:
 			# grab the current frame
@@ -194,6 +348,10 @@ class ArmMovement():
 				print("Desired Corrections Pan: "+repr(P)+" and  Tilt: "+repr(T)+"\n")
 				# rospy.sleep(0.1)
 				self.move_arm(P,T)
+			# Did not detect any contours, then sweep
+			else:
+				self.pan_sweep()
+				self.tilt_sweep()
 			# show the frame to our screen
 			cv2.imshow("Frame", frame)
 			
@@ -202,14 +360,13 @@ class ArmMovement():
 			if key == ord("q"):
 				break
 		# rospy.spin()
-		## When finished shut down moveit_commander.
-		moveit_commander.roscpp_shutdown()
 
 
 if __name__=='__main__':
   try:
     arm = ArmMovement()
     arm.main()
+    # arm.__test_echo_current_joint_values__()
     # arm.__test_joint_movement__()
   except rospy.ROSInterruptException:
     pass
