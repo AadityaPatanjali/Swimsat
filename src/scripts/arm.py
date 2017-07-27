@@ -5,7 +5,6 @@ import select
 import rospy
 import moveit_commander
 import moveit_msgs.msg
-import geometry_msgs.msg
 import std_msgs.msg
 from prettytable import PrettyTable
 from arbotix_python.joints import *
@@ -19,8 +18,7 @@ class ArmMovement():
 		self.robot = moveit_commander.RobotCommander()
 		self.scene = moveit_commander.PlanningSceneInterface()
 		self.group = moveit_commander.MoveGroupCommander("arm")
-		self.display_trajectory_publisher = rospy.Publisher('/move_group/display_planned_path', moveit_msgs.msg.DisplayTrajectory,queue_size=10)
-		# rospy.Subscriber('panTilt',std_msgs.msg.Float64MultiArray,self.move_joints_callback)
+		# self.display_trajectory_publisher = rospy.Publisher('/move_group/display_planned_path', moveit_msgs.msg.DisplayTrajectory,queue_size=10)
 		joint_defaults = getJointsFromURDF()
 		joints = rospy.get_param('/arbotix/joints', dict())
 		self.joint_limits = list()
@@ -39,13 +37,16 @@ class ArmMovement():
 		self.tilt_sweep_min = -40.0
 		self.pan_left =True
 		self.tilt_up = True
-
 		self.set_homing_position()
 
 	def __del__(self):
 		self.set_homing_position()		
 		## When finished shut down moveit_commander.
 		moveit_commander.roscpp_shutdown()
+
+	def subscribe(self):
+		rospy.Subscriber('panTilt',std_msgs.msg.Float64MultiArray,self.move_joints_callback)
+
 
 	def set_pan_index(self,pan_index):
 		self.pan_index = pan_index
@@ -193,15 +194,7 @@ class ArmMovement():
 	def move_joints_callback(self,data):
 		[pan,tilt] = data.data
 		# print "== Pan and Tilt ",(pan,tilt)
-		group_variable_values = self.group.get_current_joint_values()
-		group_variable_values[self.pan_index] += pan
-		group_variable_values[self.tilt_index] += tilt
-		try:
-			self.group.set_joint_value_target(group_variable_values)
-			# plan2 = group.plan()
-			self.group.go(wait=True)
-		except:
-			pass
+		self.move_arm(pan,tilt)
 
 	def move_arm(self,pan,tilt):
 		group_variable_values = self.group.get_current_joint_values()
@@ -281,7 +274,7 @@ class ArmMovement():
 		print "============ Printing robot state"
 		print self.robot.get_current_state()
 
-	def main(self):
+	def image_processing(self):
 		################################################################################################
 		##### ENTER YOUR CODE HERE
 		################################################################################################
@@ -372,7 +365,8 @@ class ArmMovement():
 if __name__=='__main__':
 	try:
 		arm = ArmMovement()
-		arm.main()
+		arm.subscribe()
+		# arm.image_processing()
 		# while True:
 		# 	rospy.sleep(0.5)
 		# 	arm.pan_sweep()
