@@ -287,7 +287,9 @@ class ArmMovement():
 		################################################################################################
 		Track_tol = 30
 		X_Step = math.pi/180*4
+		kx=0.0011
 		Y_Step = math.pi/180*4
+		ky=0.0011  #0.001
 		P = 0
 		T = 0
 		# HSV Limits
@@ -330,21 +332,25 @@ class ArmMovement():
 
 				if abs(X_er) < Track_tol:
 					P = 0
+				else:
+					P = -kx*X_er
 
-				elif X_er > 0:
-					P = -X_Step
+				# elif X_er > 0:
+				# 	P = kx*X_er #-X_Step
 
-				elif X_er < 0:
-					P =  X_Step
+				# elif X_er < 0:
+				# 	P =  -kx*X_er #X_Step
 
 				if abs(Y_er) < Track_tol:
 					T = 0
+				else:
+					T = -ky*Y_er
 
-				elif Y_er > 0:
-					T = -Y_Step
+				# elif Y_er > 0:
+				# 	T = -ky*Y_er #-Y_Step
 
-				elif Y_er < 0:
-					T = Y_Step
+				# elif Y_er < 0:
+				# 	T = ky*Y_er#Y_Step
 				print("Desired Corrections Pan: "+repr(P)+" and  Tilt: "+repr(T)+"\n")
 				# rospy.sleep(0.1)
 				self.move_arm(P,T)
