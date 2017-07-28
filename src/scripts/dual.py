@@ -6,8 +6,8 @@ from prettytable import PrettyTable
 import math
 import cv2
 
-class ImageProcessing()
-	def __init__():
+class ImageProcessing():
+	def __init__(self):
 		rospy.init_node('meteor_detection', anonymous=True)
 		self.pub =  rospy.Publisher('panTilt', Float64MultiArray, queue_size=10)
 
@@ -26,7 +26,7 @@ class ImageProcessing()
 		greenLower = (0,0,255)
 		greenUpper = (91,23,255)
 		
-		camera = cv2.VideoCapture(1)
+		camera = cv2.VideoCapture(0)
 
 		while True:
 			# grab the current frame
@@ -82,7 +82,9 @@ class ImageProcessing()
 				# elif Y_er < 0:
 				# 	T = ky*Y_er#Y_Step
 				print("Desired Corrections Pan: "+repr(P)+" and  Tilt: "+repr(T)+"\n")
-				self.pub.publish([P,T])
+				angles = Float64MultiArray()
+				angles.data = [P, T]
+				self.pub.publish(angles)
 				# rospy.sleep(0.1)
 			# # Did not detect any contours, then sweep
 			# else:
