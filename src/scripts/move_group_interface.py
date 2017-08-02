@@ -8,6 +8,8 @@ import moveit_msgs.msg
 import geometry_msgs.msg
 import std_msgs.msg
 from prettytable import PrettyTable
+from arbotix_python.joints import *
+import math
 
 moveit_commander.roscpp_initialize(sys.argv)
 rospy.init_node('move_group_python', anonymous=True)
@@ -15,45 +17,56 @@ rospy.init_node('move_group_python', anonymous=True)
 robot = moveit_commander.RobotCommander()
 scene = moveit_commander.PlanningSceneInterface()
 group = moveit_commander.MoveGroupCommander("arm")
-joint_defaults = getJointsFromURDF()
-joints = rospy.get_param('/arbotix/joints', dict())
-joint_limits = list()
-# Get joint limits
-for name in sorted(joints.keys()):
-  # pull angles
-  min_angle, max_angle = getJointLimits(name, joint_defaults)
-  joint_limits.append({'name':name, 'min_angle':min_angle, 'max_angle':max_angle})
+# joint_defaults = getJointsFromURDF()
+# joints = rospy.get_param('/arbotix/joints', dict())
+# joint_limits = list()
+# # Get joint limits
+# for name in sorted(joints.keys()):
+#   # pull angles
+#   min_angle, max_angle = getJointLimits(name, joint_defaults)
+#   joint_limits.append({'name':name, 'min_angle':min_angle*math.pi/180.0, 'max_angle':max_angle*math.pi/180.0})
+# max_limits = [joint_limits[i].get('max_angle')*180.0/math.pi*100 for i in range(0,5)]
+# min_limits = [joint_limits[i].get('min_angle')*180.0/math.pi*100 for i in range(0,5)]
+pan_index  = 0
+tilt_index = 3
+pan_angle_min  = -90.0*math.pi/180.0
+pan_angle_max  =  90.0*math.pi/180.0
+tilt_angle_min = -90.0*math.pi/180.0
+tilt_angle_max =  90.0*math.pi/180.0
 
 def move_joints(data):
   [pan,tilt] = data.data
-
+  # print "== Pan and Tilt ",(pan,tilt)
   group_variable_values = group.get_current_joint_values()
-  print "============ Joint values: ", group_variable_values
+  # print "============ Joint values: ", group_variable_values
 
   ## Then, we will get the current set of joint values for the group
 
   ## Now, let's modify one of the joints, plan to the new joint
   ## space goal and visualize the plan
-  pan_index = 3
-  tilt_index = 0
-  if   group_variable_values[pan_index]+pan > joint_limits[pan_index].get('max_angle', 3.15)
-    group_variable_values[pan_index] = joint_limits[pan_index].get('max_angle',group_variable_values[pan_index])
-  elif group_variable_values[pan_index]+pan < joint_limits[pan_index].get('min_angle',-3.15)
-    group_variable_values[pan_index] = joint_limits[pan_index].get('min_angle',group_variable_values[pan_index])
-  else
-    group_variable_values[pan_index] += pan
+
+  # if   group_variable_values[pan_index]+pan > pan_angle_max:
+  #   group_variable_values[pan_index] = pan_angle_max
+  # elif group_variable_values[pan_index]+pan < pan_angle_min:
+  #   group_variable_values[pan_index] = pan_angle_min
+  # else:
+  #   group_variable_values[pan_index] += pan
   
-  if   group_variable_values[tilt_index]+tilt > joint_limits[tilt_index].get('max_angle', 3.15)
-    group_variable_values[tilt_index] = joint_limits[tilt_index].get('max_angle',group_variable_values[tilt_index])
-  elif group_variable_values[tilt_index]+tilt < joint_limits[tilt_index].get('min_angle',-3.15)
-    group_variable_values[tilt_index] = joint_limits[tilt_index].get('min_angle',group_variable_values[tilt_index])
-  else
-    group_variable_values[tilt_index] += tilt
+  # if   group_variable_values[tilt_index]+tilt > tilt_angle_max:
+  #   group_variable_values[tilt_index] = tilt_angle_max
+  # elif group_variable_values[tilt_index]+tilt < tilt_angle_min:
+  #   group_variable_values[tilt_index] = tilt_angle_min
+  # else:
+  #   group_variable_values[tilt_index] += tilt
 
-
-  group.set_joint_value_target(group_variable_values)
-  # plan2 = group.plan()
-  group.go(wait=True)
+  group_variable_values[pan_index] += pan
+  group_variable_values[tilt_index] += tilt
+  try:
+    group.set_joint_value_target(group_variable_values)
+    # plan2 = group.plan()
+    group.go(wait=True)
+  except:
+    pass
 
 def move_group_python_interface_tutorial():
 
@@ -117,7 +130,7 @@ def move_group_python_interface_tutorial():
   # file.write(str(pose_list))
   # file.close()
 
-  print "============ Generating plan 1"
+  # print "============ Generating plan 1"
   # current_pose = group.get_current_pose()
   # pose_target = current_pose.pose
   # print "Current pose: %s" %current_pose.pose
@@ -144,10 +157,37 @@ def move_group_python_interface_tutorial():
   # print "============ Waiting while plan1 is visualized before execution on robot..."
   # rospy.sleep(5)
 
+  # while True:
+  #   group_variable_values = group.get_current_joint_values()
+  #   print "Max Angles", [joint_limits[i].get('max_angle')*180.0/math.pi*100 for i in range(0,5)]
+  #   print "Min Angles", [joint_limits[i].get('min_angle')*180.0/math.pi*100 for i in range(0,5)]
+  #   print "Current joint angles:", [ele*180.0/math.pi for ele in group_variable_values]
+  #   try:
+  #     angle = float(input("Enter angle to turn: "))
+  #     index = int(input("Enter index: "))
+  #     print "=========== Moving by ", angle, " degrees"
+  #     group_variable_values[index] += angle*math.pi/180.0
+  #     print "New angles will be:", [ele*180.0/math.pi for ele in group_variable_values]
+  #     group.set_joint_value_target(group_variable_values)
+  #     group.go(group_variable_values, wait=True)
+  #   except:
+  #     print "Exiting!"
+  #     break
+  # group_variable_values = group.get_current_joint_values()
+  # angle = 90.0
+  # group_variable_values[0] = angle*math.pi/180.0/100
+  # group.set_joint_value_target(group_variable_values)
   # group.go(wait=True)
-  # current_pose = group.get_current_pose()
-  # position = current_pose.pose.position
-  # orientation = current_pose.pose.orientation
+  # t = PrettyTable(['0','1','2','3','4'])
+  # while True:
+  #   group_variable_values = group.get_current_joint_values()
+  #   t.add_row([ele*180.0/math.pi for ele in group_variable_values])
+  #   print t
+  #   # print "Current joint angles:", [ele*180.0/math.pi*100 for ele in group_variable_values]
+  #   if sys.stdin in select.select([sys.stdin], [], [], 0)[0]:
+  #     line = raw_input()
+  #     break
+
   # print "============ The current pose of the robot is %s" % position
 
 
@@ -163,15 +203,15 @@ def loop_exit(condition,execute):
   while condition:
     execute
     if sys.stdin in select.select([sys.stdin], [], [], 0)[0]:
-        line = raw_input()
-        break
+      line = raw_input()
+      break
 
 def loop_continue(condition,execute):
   while condition:
     execute
     if sys.stdin in select.select([sys.stdin], [], [], 0)[0]:
-        line = raw_input()
-        continue
+      line = raw_input()
+      continue
 
 if __name__=='__main__':
   try:

@@ -5,11 +5,12 @@ import select
 import rospy
 import moveit_commander
 import moveit_msgs.msg
-import std_msgs.msg
+from std_msgs.msg import Float64MultiArray
 from prettytable import PrettyTable
 from arbotix_python.joints import *
 import math
 import cv2
+import copy
 
 class ArmMovement():
 	def __init__(self):
@@ -29,6 +30,10 @@ class ArmMovement():
 			self.joint_limits.append({'name':name, 'min_angle':min_angle*math.pi/180.0, 'max_angle':max_angle*math.pi/180.0})
 		self.pan_index  = 0
 		self.tilt_index = 3
+		self.disturbance_index = 2
+		self.disturbance_down = False
+		self.disturbance_step = math.pi/180.0*0.2
+		self.set_disturbance_limits(width=0.2)
 		self.pan_sweep_step = math.pi/180.0*10.0
 		self.tilt_sweep_step = math.pi/180.0*10.0
 		self.pan_sweep_max = 40.0
@@ -45,7 +50,7 @@ class ArmMovement():
 		moveit_commander.roscpp_shutdown()
 
 	def subscribe(self):
-		rospy.Subscriber('panTilt',std_msgs.msg.Float64MultiArray,self.move_joints_callback)
+		rospy.Subscriber('panTilt',Float64MultiArray,self.move_joints_callback)
 
 
 	def set_pan_index(self,pan_index):
@@ -103,8 +108,13 @@ class ArmMovement():
 		else:
 			return [ele*180.0/math.pi for ele in group_variable_values]
 
+	def set_disturbance_limits(self, width = 5.0):
+		angle = self.get_current_joint_values(degrees=True)[self.disturbance_index]
+		self.disturbance_max = math.pi/180.0*(angle + width)
+		self.disturbance_min = math.pi/180.0*(angle - width)
+
 	def set_homing_position(self):
-		angles = [0.0,52.0,-80.0,-60.0,0.0]
+		angles = [0.0,60.0,-81.0,-60.0,0.0]
 		group_variable_values = [ele*math.pi/180.0 for ele in angles]
 		self.group.set_joint_value_target(group_variable_values)
 		self.group.go(wait=True)
@@ -194,11 +204,8 @@ class ArmMovement():
 	def move_joints_callback(self,data):
 		[pan,tilt] = data.data
 		# print "== Pan and Tilt ",(pan,tilt)
-		self.move_arm(pan,tilt)
-
-	def move_arm(self,pan,tilt):
 		group_variable_values = self.group.get_current_joint_values()
-		group_variable_values_copy = self.group.get_current_joint_values()
+		group_variable_values_copy = copy.deepcopy(group_variable_values)
 		group_variable_values[self.pan_index] += pan
 		group_variable_values[self.tilt_index] += tilt
 		try:
@@ -206,9 +213,70 @@ class ArmMovement():
 			# plan2 = group.plan()
 			self.group.go(wait=False)
 		except:
-			self.group.set_joint_value_target(group_variable_values_copy)
+			# self.group.set_joint_value_target(group_variable_values_copy)
+			# # plan2 = group.plan()
+			# self.group.go(wait=False)
+			print "No plan found. Setting to original value"
+
+
+	def move_arm(self,pan,tilt):
+		group_variable_values = self.group.get_current_joint_values()
+		group_variable_values_copy = copy.deepcopy(group_variable_values)
+		group_variable_values[self.pan_index] += pan
+		group_variable_values[self.tilt_index] += tilt
+		try:
+			self.group.set_joint_value_target(group_variable_values)
 			# plan2 = group.plan()
 			self.group.go(wait=False)
+		except:
+			# self.group.set_joint_value_target(group_variable_values_copy)
+			# # plan2 = group.plan()
+			# self.group.go(wait=False)
+			print "No plan found. Setting to original value"
+
+	def introduce_disturbance(self,disturbance_value,waiting):
+		group_variable_values = self.group.get_current_joint_values()
+		group_variable_values_copy = copy.deepcopy(group_variable_values)
+		final = group_variable_values[self.disturbance_index] + disturbance_value
+		if final > self.disturbance_max:
+			group_variable_values[self.disturbance_index] = self.disturbance_max
+		elif final < self.disturbance_min:
+			group_variable_values[self.disturbance_index] = self.disturbance_min
+		else: group_variable_values[self.disturbance_index] = final
+		try:
+			self.group.set_joint_value_target(group_variable_values)
+			# plan2 = group.plan()
+			self.group.go(wait=waiting)
+		except:
+			# self.group.set_joint_value_target(group_variable_values_copy)
+			# # plan2 = group.plan()
+			# self.group.go(wait=waiting)
+			print "No plan found. Setting to original value"
+		# error = math.pi/180.0*0.2
+		# while True:
+		# 	group_variable_values = self.group.get_current_joint_values()
+		# 	group_variable_values_copy = self.group.get_current_joint_values()
+		# 	group_variable_values[self.disturbance_index] += self.disturbance_step
+		# 	try:
+		# 		self.group.set_joint_value_target(group_variable_values)
+		# 		# plan2 = group.plan()
+		# 		self.group.go(wait=waiting)
+		# 	except:
+		# 		self.group.set_joint_value_target(group_variable_values_copy)
+		# 		# plan2 = group.plan()
+		# 		self.group.go(wait=waiting)
+		# 		print "No plan found. Setting to original value"
+		# 	if group_variable_values[self.disturbance_index] < (final+error) and group_variable_values[self.disturbance_index] > (final-error):
+		# 		break
+
+
+	def disturb(self,wait):
+		if self.disturbance_down:
+			self.introduce_disturbance(self.disturbance_step,wait)
+			self.disturbance_down = False
+		else:
+			self.introduce_disturbance(-self.disturbance_step,wait)
+			self.disturbance_down = True
 
 	def __move_by_pose_orientation__(self,orientation_w=0,orientation_x=0,orientation_y=0,orientation_z=1.0):
 		print "============ Generating plan"
@@ -251,8 +319,11 @@ class ArmMovement():
 		self.group.go(wait=True)
 
 	def __test_echo_current_joint_values__(self):
+		# camera = cv2.VideoCapture(1)
 		t = PrettyTable(['0','1','2','3','4'])
 		while True:
+			# (grabbed, frame) = camera.read()
+			# cv2.imshow("Frame", frame)
 			group_variable_values = self.group.get_current_joint_values()
 			t.add_row([ele*180.0/math.pi for ele in group_variable_values])
 			print t
@@ -280,9 +351,9 @@ class ArmMovement():
 		################################################################################################
 		Track_tol = 30
 		X_Step = math.pi/180*4
-		kx=0.0011
+		kx=0.001
 		Y_Step = math.pi/180*4
-		ky=0.0011  #0.001
+		ky=0.001  #0.001
 		P = 0
 		T = 0
 		# HSV Limits
@@ -292,6 +363,7 @@ class ArmMovement():
 		camera = cv2.VideoCapture(1)
 
 		while True:
+			self.disturb(False)
 			# grab the current frame
 			(grabbed, frame) = camera.read()
 
@@ -365,8 +437,9 @@ class ArmMovement():
 if __name__=='__main__':
 	try:
 		arm = ArmMovement()
-		arm.subscribe()
-		# arm.image_processing()
+		# arm.subscribe()
+		# rospy.spin()
+		arm.image_processing()
 		# while True:
 		# 	rospy.sleep(0.5)
 		# 	arm.pan_sweep()
@@ -374,7 +447,7 @@ if __name__=='__main__':
 		# 	if sys.stdin in select.select([sys.stdin], [], [], 0)[0]:
 		# 		line = raw_input()
 		# 		break
-	    # arm.__test_echo_current_joint_values__()
-	    # arm.__test_joint_movement__()
+		# arm.__test_echo_current_joint_values__()
+		# arm.__test_joint_movement__()
 	except rospy.ROSInterruptException:
 		pass

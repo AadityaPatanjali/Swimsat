@@ -81,10 +81,13 @@ class ImageProcessing():
 
 				# elif Y_er < 0:
 				# 	T = ky*Y_er#Y_Step
-				print("Desired Corrections Pan: "+repr(P)+" and  Tilt: "+repr(T)+"\n")
 				angles = Float64MultiArray()
 				angles.data = [P, T]
 				self.pub.publish(angles)
+				t = PrettyTable(['Pan','Tilt'])
+				t.add_row(angles.data)
+				print(t)
+				# print("Desired Corrections Pan: "+repr(P)+" and  Tilt: "+repr(T)+"\n")
 				# rospy.sleep(0.1)
 			# # Did not detect any contours, then sweep
 			# else:
