@@ -11,6 +11,7 @@ from arbotix_python.joints import *
 import math
 import cv2
 import copy
+from PID import PID
 
 class ArmMovement():
 	def __init__(self):
@@ -352,13 +353,16 @@ class ArmMovement():
 		################################################################################################
 		##### ENTER YOUR CODE HERE
 		################################################################################################
-		Track_tol = 30
+		Track_tol = 50
 		X_Step = math.pi/180*4
 		kx=0.0007
 		Y_Step = math.pi/180*4
 		ky=0.0007  #0.001
 		P = 0
 		T = 0
+		
+		homing_count = 0
+		max_homing_count = 50
 		# HSV Limits
 		# # Ball moving
 		# greenLower = (0,0,255)
@@ -432,8 +436,11 @@ class ArmMovement():
 				# rospy.sleep(0.1)
 				self.move_arm(P,T)
 			# # Did not detect any contours, then sweep
-			# else:
-			# 	self.set_homing_position()
+			else:
+				homing_count +=1
+				if homing_count >= max_homing_count:
+					self.set_homing_position()
+					homing_count = 0
 				# self.pan_sweep()
 				# self.tilt_sweep()
 
