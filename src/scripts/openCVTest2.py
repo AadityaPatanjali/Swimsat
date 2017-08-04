@@ -11,7 +11,7 @@ import os
 ###################################################################################################
 def main():
 
-    capWebcam = cv2.VideoCapture(2)         # declare a VideoCapture object and associate to webcam, 0 => use 1st webcam
+    capWebcam = cv2.VideoCapture(1)         # declare a VideoCapture object and associate to webcam, 0 => use 1st webcam
 
                                             # show original resolution
     # print "default resolution = " + str(capWebcam.get(cv2.CAP_PROP_FRAME_WIDTH)) + "x" + str(capWebcam.get(cv2.CAP_PROP_FRAME_HEIGHT))

@@ -114,7 +114,10 @@ class ArmMovement():
 		self.disturbance_min = math.pi/180.0*(angle - width)
 
 	def set_homing_position(self):
-		angles = [0.0,60.0,-81.0,-60.0,0.0]
+		# # Previous angles
+		# angles = [0.0,60.0,-81.0,-60.0,0.0]
+		# Current angles
+		angles = [0.0,28.0,-32.0,-70.0,0.0]
 		group_variable_values = [ele*math.pi/180.0 for ele in angles]
 		self.group.set_joint_value_target(group_variable_values)
 		self.group.go(wait=True)
@@ -351,19 +354,28 @@ class ArmMovement():
 		################################################################################################
 		Track_tol = 30
 		X_Step = math.pi/180*4
-		kx=0.001
+		kx=0.0007
 		Y_Step = math.pi/180*4
-		ky=0.001  #0.001
+		ky=0.0007  #0.001
 		P = 0
 		T = 0
 		# HSV Limits
-		greenLower = (0,0,255)
-		greenUpper = (91,23,255)
+		# # Ball moving
+		# greenLower = (0,0,255)
+		# greenUpper = (91,23,255)
+
+		# # Meteor green
+		# greenLower = (0,0,255)
+		# greenUpper = (162,32,255)
+
+		# Meteor orange
+		greenLower = (0,75,255)
+		greenUpper = (90,146,255)
 		
 		camera = cv2.VideoCapture(1)
 
 		while True:
-			self.disturb(False)
+			# self.disturb(False)
 			# grab the current frame
 			(grabbed, frame) = camera.read()
 
@@ -421,8 +433,10 @@ class ArmMovement():
 				self.move_arm(P,T)
 			# # Did not detect any contours, then sweep
 			# else:
-			# 	self.pan_sweep()
-			# 	self.tilt_sweep()
+			# 	self.set_homing_position()
+				# self.pan_sweep()
+				# self.tilt_sweep()
+
 			# show the frame to our screen
 			cv2.imshow("Frame", frame)
 			cv2.imshow("Tresholded", mask)
@@ -437,9 +451,9 @@ class ArmMovement():
 if __name__=='__main__':
 	try:
 		arm = ArmMovement()
+		arm.image_processing()
 		# arm.subscribe()
 		# rospy.spin()
-		arm.image_processing()
 		# while True:
 		# 	rospy.sleep(0.5)
 		# 	arm.pan_sweep()
@@ -447,7 +461,7 @@ if __name__=='__main__':
 		# 	if sys.stdin in select.select([sys.stdin], [], [], 0)[0]:
 		# 		line = raw_input()
 		# 		break
-		# arm.__test_echo_current_joint_values__()
 		# arm.__test_joint_movement__()
+		# arm.__test_echo_current_joint_values__()
 	except rospy.ROSInterruptException:
 		pass
