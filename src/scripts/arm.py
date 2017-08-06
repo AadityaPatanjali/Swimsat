@@ -12,6 +12,7 @@ import math
 import cv2
 import copy
 from PID import PID
+import time
 
 class ArmMovement():
 	def __init__(self):
@@ -357,13 +358,27 @@ class ArmMovement():
 		################################################################################################
 		##### ENTER YOUR CODE HERE
 		################################################################################################
+		
+		
 		Track_tol = 30
 		X_Step = math.pi/180*2  #4
-		kx=0.0007
+		kpx = 0.0006
+		kdx = 0.00007
+
 		Y_Step = math.pi/180*2
-		ky=0.0008  #0.001 #0.0007
+		kpy = 0.0006  #0.001 #0.0007
+		kdy = 0.00007
+
 		P = 0
 		T = 0
+
+		dt = 0
+		Vx = 0
+		Vy = 0
+
+		x_pre = 0
+		y_pre = 0
+
 		
 		homing_count = 0
 		max_homing_count = 30
@@ -382,7 +397,9 @@ class ArmMovement():
 		
 		camera = cv2.VideoCapture(1)
 
+
 		while True:
+			t = time.time()
 			# self.disturb(False)
 			# grab the current frame
 			(grabbed, frame) = camera.read()
@@ -424,30 +441,31 @@ class ArmMovement():
 				X_er = (X_des-im_x)
 				Y_er = (Y_des-im_y)
 
+				if dt == 0:
+					Vx = 0
+					Vy = 0
+				else:
+					Vx = (X_des-x_pre)/dt
+					Vy = (Y_des-y_pre)/dt
+
+
 				if abs(X_er) < Track_tol:
 					P = 0
 				else:
-					P = -kx*X_er
-
-				# elif X_er > 0:
-				# 	P = kx*X_er #-X_Step
-
-				# elif X_er < 0:
-				# 	P =  -kx*X_er #X_Step
+					P = -kpx*X_er-(kdx*Vx)
 
 				if abs(Y_er) < Track_tol:
 					T = 0
 				else:
-					T = -ky*Y_er
+					T = -kpy*Y_er-(kdy*Vy)
+							# Differential Controller Code
 
-				# elif Y_er > 0:
-				# 	T = -ky*Y_er #-Y_Step
 
-				# elif Y_er < 0:
-				# 	T = ky*Y_er#Y_Step
-				print("Desired Corrections Pan: "+repr(P)+" and  Tilt: "+repr(T)+"\n")
+				#print("Desired Corrections Pan: "+repr(P)+" and  Tilt: "+repr(T)+"\n")
 				# rospy.sleep(0.1)
 				self.move_arm(P,T)
+				x_pre = X_des
+				y_pre = Y_des
 			# # Did not detect any contours, then sweep
 			else:
 				homing_count +=1
@@ -461,8 +479,9 @@ class ArmMovement():
 			cv2.putText(mask,'Processed Feed',(width-240,height-5), font, 0.9,(255,255,255),2)
 			cv2.imshow("Frame", frame)
 			cv2.imshow("Tresholded", mask)
-			
 			key = cv2.waitKey(1) & 0xFF
+			dt = time.time()-t
+			#print("Loop Execution Time: "+repr(dt)+" seconds"+"\n")
 			# if the 'q' key is pressed, stop the loop
 			if key == ord("q"):
 				break
