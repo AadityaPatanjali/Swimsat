@@ -33,8 +33,8 @@ class ArmMovement():
 		self.tilt_index = 3
 		self.disturbance_index = 2
 		self.disturbance_down = False
-		self.disturbance_step = math.pi/180.0*0.2
-		self.set_disturbance_limits(width=0.2)
+		self.disturbance_step = math.pi/180.0*0.05
+		self.set_disturbance_limits(width=0.05)
 		self.pan_sweep_step = math.pi/180.0*10.0
 		self.tilt_sweep_step = math.pi/180.0*10.0
 		self.pan_sweep_max = 40.0
@@ -114,14 +114,18 @@ class ArmMovement():
 		self.disturbance_max = math.pi/180.0*(angle + width)
 		self.disturbance_min = math.pi/180.0*(angle - width)
 
-	def set_homing_position(self):
+	def set_homing_position(self,initial=True):
 		# # Previous angles
 		# angles = [0.0,60.0,-81.0,-60.0,0.0]
 		# Current angles
 		angles = [0.0,28.0,-32.0,-70.0,0.0]
+		# if not initial:
+		# 	group_variable_values = self.get_current_joint_values(degrees = True)
+		# 	angles[3] = group_variable_values[3]
+
 		group_variable_values = [ele*math.pi/180.0 for ele in angles]
 		self.group.set_joint_value_target(group_variable_values)
-		self.group.go(wait=True)
+		self.group.go(wait=initial)
 
 	def get_max_limits(self,degrees=False):
 		if degrees:
@@ -353,28 +357,28 @@ class ArmMovement():
 		################################################################################################
 		##### ENTER YOUR CODE HERE
 		################################################################################################
-		Track_tol = 50
-		X_Step = math.pi/180*4
+		Track_tol = 30
+		X_Step = math.pi/180*2  #4
 		kx=0.0007
-		Y_Step = math.pi/180*4
-		ky=0.0007  #0.001
+		Y_Step = math.pi/180*2
+		ky=0.0008  #0.001 #0.0007
 		P = 0
 		T = 0
 		
 		homing_count = 0
-		max_homing_count = 50
+		max_homing_count = 30
 		# HSV Limits
-		# # Ball moving
-		# greenLower = (0,0,255)
-		# greenUpper = (91,23,255)
+		# Bottle Cap
+		greenLower = (44,127,48)
+		greenUpper = (112,255,255)
 
 		# # Meteor green
 		# greenLower = (0,0,255)
 		# greenUpper = (162,32,255)
 
 		# Meteor orange
-		greenLower = (0,75,255)
-		greenUpper = (90,146,255)
+		#greenLower = (0,75,255)
+		#greenUpper = (90,146,255)
 		
 		camera = cv2.VideoCapture(1)
 
@@ -388,6 +392,11 @@ class ArmMovement():
 			height, width, channels = frame.shape
 			im_x = width/2
 			im_y = height/2
+			mar_lin = 5
+			font = cv2.FONT_HERSHEY_SIMPLEX
+			cv2.putText(frame,'Incomming Feed',(width-240,height-5), font, 0.9,(255,255,255),2)
+			cv2.line(frame,(im_x-mar_lin,im_y-mar_lin) ,(im_x+mar_lin,im_y+mar_lin),(0,0,255),4)
+			cv2.line(frame,(im_x-mar_lin,im_y+mar_lin) ,(im_x+mar_lin,im_y-mar_lin),(0,0,255),4)
 
 			# construct a mask for your color 
 
@@ -403,10 +412,14 @@ class ArmMovement():
 				c = max(cnts, key=cv2.contourArea)
 				#for c in cnts:
 				(x,y,w,h) = cv2.boundingRect(c)
-				cv2.rectangle(frame,(x,y),(x+w,y+h),(0,255,0),2)
+				#cv2.rectangle(frame,(x,y),(x+w,y+h),(0,255,0),2)
+
 
 				X_des = x+(w/2)
 				Y_des = y+(h/2)
+				cv2.rectangle(frame,(X_des-(Track_tol/2)-20,Y_des-(Track_tol/2)-20),(X_des+(Track_tol/2)+20,Y_des+(Track_tol/2)+20),(0,255,0),2)
+				det_r = 4
+				cv2.circle(frame,(X_des,Y_des), det_r, (0,255,0), -1)
 
 				X_er = (X_des-im_x)
 				Y_er = (Y_des-im_y)
@@ -439,12 +452,13 @@ class ArmMovement():
 			else:
 				homing_count +=1
 				if homing_count >= max_homing_count:
-					self.set_homing_position()
+					self.set_homing_position(initial = False)
 					homing_count = 0
 				# self.pan_sweep()
 				# self.tilt_sweep()
 
 			# show the frame to our screen
+			cv2.putText(mask,'Processed Feed',(width-240,height-5), font, 0.9,(255,255,255),2)
 			cv2.imshow("Frame", frame)
 			cv2.imshow("Tresholded", mask)
 			
