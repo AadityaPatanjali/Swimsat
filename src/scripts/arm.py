@@ -12,6 +12,7 @@ import math
 import cv2
 import copy
 from PID import PID
+import time
 
 class ArmMovement():
 	def __init__(self):
@@ -33,8 +34,8 @@ class ArmMovement():
 		self.tilt_index = 3
 		self.disturbance_index = 2
 		self.disturbance_down = False
-		self.disturbance_step = math.pi/180.0*0.2
-		self.set_disturbance_limits(width=0.2)
+		self.disturbance_step = math.pi/180.0*0.05
+		self.set_disturbance_limits(width=0.05)
 		self.pan_sweep_step = math.pi/180.0*10.0
 		self.tilt_sweep_step = math.pi/180.0*10.0
 		self.pan_sweep_max = 40.0
@@ -46,7 +47,9 @@ class ArmMovement():
 		self.set_homing_position()
 
 	def __del__(self):
-		self.set_homing_position()		
+		# self.set_homing_position()		
+		self.group.set_joint_value_target([0,0,0,0,0])
+		self.group.go(wait=True)
 		## When finished shut down moveit_commander.
 		moveit_commander.roscpp_shutdown()
 
@@ -114,14 +117,21 @@ class ArmMovement():
 		self.disturbance_max = math.pi/180.0*(angle + width)
 		self.disturbance_min = math.pi/180.0*(angle - width)
 
-	def set_homing_position(self):
+	def set_homing_position(self,initial=True):
 		# # Previous angles
 		# angles = [0.0,60.0,-81.0,-60.0,0.0]
-		# Current angles
-		angles = [0.0,28.0,-32.0,-70.0,0.0]
+		# # 642 Setup 1 angles
+		# angles = [0.0,28.0,-32.0,-70.0,0.0]		
+		# # SmallSat Setup backup
+		# angles = [-0.20,17.72,-31.64,-66.50,0.0]
+		angles = [-0.20,17.72,-31.64,-66.50,0.0]
+		# if not initial:
+		# 	group_variable_values = self.get_current_joint_values(degrees = True)
+		# 	angles[3] = group_variable_values[3]
+
 		group_variable_values = [ele*math.pi/180.0 for ele in angles]
 		self.group.set_joint_value_target(group_variable_values)
-		self.group.go(wait=True)
+		self.group.go(wait=initial)
 
 	def get_max_limits(self,degrees=False):
 		if degrees:
@@ -335,7 +345,7 @@ class ArmMovement():
 			if sys.stdin in select.select([sys.stdin], [], [], 0)[0]:
 				line = raw_input()
 				break
-
+				
 	def __test_print_info__(self):
 		## We can get the name of the reference frame for this robot
 		print "============ Reference frame: %s" % group.get_planning_frame()
@@ -353,32 +363,60 @@ class ArmMovement():
 		################################################################################################
 		##### ENTER YOUR CODE HERE
 		################################################################################################
-		Track_tol = 50
-		X_Step = math.pi/180*4
-		kx=0.0007
-		Y_Step = math.pi/180*4
-		ky=0.0007  #0.001
+		
+		
+		Track_tol = 30
+
+		kpx = 0.0005 #0.00063 #0.0006 #0.00057  55  53
+		kdx = 0.00008  #0.00006/7
+
+		kpy = 0.0003  #0.001 #0.0007 0.00045 0.00043/4/35 33
+		kdy = 0.00009  #0.0007
+
 		P = 0
 		T = 0
+
+		dt = 0
+		Vx = 0
+		Vy = 0
+
+		x_pre = 0
+		y_pre = 0
+
 		
 		homing_count = 0
-		max_homing_count = 50
+		max_homing_count = 20
 		# HSV Limits
-		# # Ball moving
-		# greenLower = (0,0,255)
-		# greenUpper = (91,23,255)
+		# Bottle Cap
+		#greenLower = (44,127,48)
+		#greenUpper = (112,255,255)
 
 		# # Meteor green
 		# greenLower = (0,0,255)
 		# greenUpper = (162,32,255)
 
-		# Meteor orange
-		greenLower = (0,75,255)
-		greenUpper = (90,146,255)
+		# # USU 201A Meteor Cap night
+		# greenLower = (0,43,147)
+		# greenUpper = (26,215,255)
+
+		# USU 201A Meteor Cap day
+		#greenLower = (0,69,230)
+		#greenUpper = (50,122,255)
+
+		# # SmallSat Poster booth backup
+		# greenLower = (12,37,245)
+		# greenUpper = (34,101,255)
+
+		# SmallSat Poster booth
+		greenLower = (12,37,245)
+		greenUpper = (34,101,255)
+		
 		
 		camera = cv2.VideoCapture(1)
 
+
 		while True:
+			t = time.time()
 			# self.disturb(False)
 			# grab the current frame
 			(grabbed, frame) = camera.read()
@@ -388,6 +426,11 @@ class ArmMovement():
 			height, width, channels = frame.shape
 			im_x = width/2
 			im_y = height/2
+			mar_lin = 5
+			font = cv2.FONT_HERSHEY_SIMPLEX
+			cv2.putText(frame,'Incomming Feed',(width-240,height-5), font, 0.9,(255,255,255),2)
+			cv2.line(frame,(im_x-mar_lin,im_y-mar_lin) ,(im_x+mar_lin,im_y+mar_lin),(0,0,255),4)
+			cv2.line(frame,(im_x-mar_lin,im_y+mar_lin) ,(im_x+mar_lin,im_y-mar_lin),(0,0,255),4)
 
 			# construct a mask for your color 
 
@@ -403,52 +446,59 @@ class ArmMovement():
 				c = max(cnts, key=cv2.contourArea)
 				#for c in cnts:
 				(x,y,w,h) = cv2.boundingRect(c)
-				cv2.rectangle(frame,(x,y),(x+w,y+h),(0,255,0),2)
+				#cv2.rectangle(frame,(x,y),(x+w,y+h),(0,255,0),2)
+
 
 				X_des = x+(w/2)
 				Y_des = y+(h/2)
+				cv2.rectangle(frame,(X_des-(Track_tol/2)-20,Y_des-(Track_tol/2)-20),(X_des+(Track_tol/2)+20,Y_des+(Track_tol/2)+20),(0,255,0),2)
+				det_r = 4
+				cv2.circle(frame,(X_des,Y_des), det_r, (0,255,0), -1)
 
 				X_er = (X_des-im_x)
 				Y_er = (Y_des-im_y)
 
+				if dt == 0:
+					Vx = 0
+					Vy = 0
+				else:
+					Vx = (X_des-x_pre)/dt
+					Vy = (Y_des-y_pre)/dt
+
+
 				if abs(X_er) < Track_tol:
 					P = 0
 				else:
-					P = -kx*X_er
-
-				# elif X_er > 0:
-				# 	P = kx*X_er #-X_Step
-
-				# elif X_er < 0:
-				# 	P =  -kx*X_er #X_Step
+					P = -kpx*X_er-(kdx*Vx)
 
 				if abs(Y_er) < Track_tol:
 					T = 0
 				else:
-					T = -ky*Y_er
+					T = -kpy*Y_er-(kdy*Vy)
+							# Differential Controller Code
 
-				# elif Y_er > 0:
-				# 	T = -ky*Y_er #-Y_Step
 
-				# elif Y_er < 0:
-				# 	T = ky*Y_er#Y_Step
 				print("Desired Corrections Pan: "+repr(P)+" and  Tilt: "+repr(T)+"\n")
 				# rospy.sleep(0.1)
 				self.move_arm(P,T)
+				x_pre = X_des
+				y_pre = Y_des
 			# # Did not detect any contours, then sweep
 			else:
 				homing_count +=1
 				if homing_count >= max_homing_count:
-					self.set_homing_position()
+					self.set_homing_position(initial = False)
 					homing_count = 0
 				# self.pan_sweep()
 				# self.tilt_sweep()
 
 			# show the frame to our screen
+			cv2.putText(mask,'Processed Feed',(width-240,height-5), font, 0.9,(255,255,255),2)
 			cv2.imshow("Frame", frame)
 			cv2.imshow("Tresholded", mask)
-			
 			key = cv2.waitKey(1) & 0xFF
+			dt = time.time()-t
+			#print("Loop Execution Time: "+repr(dt)+" seconds"+"\n")
 			# if the 'q' key is pressed, stop the loop
 			if key == ord("q"):
 				break
@@ -469,6 +519,6 @@ if __name__=='__main__':
 		# 		line = raw_input()
 		# 		break
 		# arm.__test_joint_movement__()
-		# arm.__test_echo_current_joint_values__()
+		#arm.__test_echo_current_joint_values__()
 	except rospy.ROSInterruptException:
 		pass

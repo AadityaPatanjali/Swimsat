@@ -58,6 +58,8 @@ class Disturbance():
 			else:
 				self.introduce_disturbance(-self.disturbance_value/2)
 				self.disturbance_down = True
+	def set_new_home_position(self):
+		
 
 if __name__=='__main__':
 	try:
