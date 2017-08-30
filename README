@@ -1,0 +1,43 @@
+TO Run the scripts to start the setup:
+1. In a new terminal: roslaunch phantomx_arm_moveit bare_min.launch
+wait till you see the All is well! in green
+2. Make sure line 511 is uncommented
+3. In a new terminal: rosrun swimsat arm.py
+
+TO Close the camera view:
+1. Press q while the camera windows are selected.
+
+TO Reset the setup to its default settings:
+1. Open arm.py, use the angle variable values from line 126 and enter it in line 127. DO NOT do anything that can change the line numbers
+2. Use greenUpper and greenLower values from 406 through 409 and enter it in lines 411 through 412. DO NOT do anything that can change the line numbers
+
+
+TO Set the Homing position:
+1. In file arm.py
+	comment line 511: arm.image_processing()
+	uncomment line 522: arm.__test_echo_current_joint_values__()
+ this will output the current joint values
+2. rosrun the arm.py file by the command: rosrun swimsat arm.py
+3. Run this command in another terminal: rosrun arbotix_python arbotix_gui
+this will help you move the robotic arm, either by checking the box for the right joint and moving the sliders(Move them slowly) or by checking and then unchecking the arm, you will be able to move the arm physically.
+Once the arm is set in position, check all joint check boxes so that it will stay in place (The arm will come down due to the weight slightly)
+4. Run in a new terminal: rosrun swimsat openCVTest2.py
+this will open up the camera view as in Line 8 of this README
+5. Note down the joint values output from the terminal of step 2
+6. Close the Arbotix GUI; Close the camera view
+7. Stop running the arm.py file by pressing the Enter key in the same terminal
+8. 	Update the angles variable in line 127 of the arm.py file to the new angles (Use one or two decimal place precision)
+9. In the same arm.py file
+	uncomment line 511: arm.image_processing()
+	comment line 522: arm.__test_echo_current_joint_values__()
+After this step, you can just rosrun the arm.py file as in Line 5 of this README
+
+
+TO Change HSV values in case the threshold is incorrect:
+Make sure no image processing code is running
+1. Run in a separate terminal: rosrun swimsat range_detector.py --filter=HSV --webcam
+2. Three windows will appear. Change the appropriate parameters - H min, H max, S min, S max, V min, V max. 
+3. Note down the new values
+4. 	Update lines 411 and 412 in the arm.py file:
+	greenLower variable to the new lower bound for the HSV parameters
+	greenUpper variable to the new upper bound for the HSV parameters
